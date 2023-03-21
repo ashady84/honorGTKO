@@ -1,1 +1,77 @@
-Undetected
+#include <windows.h>
+#include "imgui.h"
+
+bool IsProcessRunning(const char* processName) {
+    bool result = false;
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot != INVALID_HANDLE_VALUE) {
+        PROCESSENTRY32 processEntry = {};
+        processEntry.dwSize = sizeof(processEntry);
+        if (Process32First(hSnapshot, &processEntry)) {
+            do {
+                if (_stricmp(processEntry.szExeFile, processName) == 0) {
+                    result = true;
+                    break;
+                }
+            } while (Process32Next(hSnapshot, &processEntry));
+        }
+        CloseHandle(hSnapshot);
+    }
+    return result;
+}
+
+int main() {
+    bool gorillaTagRunning = IsProcessRunning("Gorilla Tag.exe");
+
+    // Initialize ImGui
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.Fonts->AddFontDefault();
+    ImGui::StyleColorsDark();
+
+    // Initialize GLFW and create a window
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "My Window", NULL, NULL);
+    glfwMakeContextCurrent(window);
+
+    // Main loop
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+
+        // Start ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Check if Gorilla Tag is running
+        gorillaTagRunning = IsProcessRunning("Gorilla Tag.exe");
+
+        // Update ImGui interface accordingly
+        if (gorillaTagRunning) {
+            ImGui::Text("Gorilla Tag Is open!");
+            if (ImGui::Button("Load")) {
+                // Do something when the button is clicked
+            }
+        } else {
+            ImGui::TextDisabled("Gorilla Tag is not open");
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+            ImGui::Button("Load");
+            ImGui::PopStyleVar();
+        }
+
+        // Render ImGui
+        ImGui::Render();
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    return 0;
+}
